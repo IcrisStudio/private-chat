@@ -51,7 +51,7 @@ export default function ChatWindow({ chatId, userId, onBack }: ChatWindowProps) 
 
   const chat = useQuery(api.chats.getUserChats, { userId });
   const currentChat = chat?.find((c) => c._id === chatId);
-  const messages = useQuery(api.chats.getMessages, { chatId });
+  const messages = useQuery(api.chats.getMessages, { chatId, userId });
   
   const sendMessage = useMutation(api.chats.sendMessage);
   const markAsSeen = useMutation(api.chats.markChatAsSeen);
