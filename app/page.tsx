@@ -1,159 +1,75 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
+import { Navbar } from "@/components/Navbar";
+import { VideoCard } from "@/components/VideoCard";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { toast } from "sonner";
+import { AdBanner } from "@/components/AdBanner";
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  
-  const signup = useMutation(api.auth.signup);
-  const login = useMutation(api.auth.login);
-  const router = useRouter();
+export default function Home() {
+    const videos = useQuery(api.videos.getVideos);
+    const trendingVideos = useQuery(api.videos.getTrendingVideos);
 
-  useEffect(() => {
-    // Check if already logged in
-    const userId = localStorage.getItem("userId");
-    if (userId) {
-      router.push("/chat");
-    }
-  }, [router]);
+    // Fetch authors for all videos
+    const allVideos = [...(trendingVideos || []), ...(videos || [])];
+    const uniqueAuthorIds = [...new Set(allVideos.map(v => v.authorId))];
+    const authors = useQuery(api.users.getUsers, uniqueAuthorIds.length > 0 ? { userIds: uniqueAuthorIds } : "skip");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    const getAuthor = (authorId: any) => authors?.find(a => a._id === authorId);
 
-    try {
-      let userId;
-      
-      if (isLogin) {
-        const result = await login({ username, password });
-        userId = result.userId;
-        toast.success("Login successful!", {
-          description: "Welcome back!",
-        });
-      } else {
-        userId = await signup({ username, password, email: email || undefined });
-        toast.success("Account created successfully!", {
-          description: "Your account has been created. Welcome!",
-        });
-      }
+    return (
+        <div className="min-h-screen bg-background">
+            <Navbar />
+            <div className="container mx-auto px-4 py-8 space-y-10">
 
-      // Store userId in localStorage (in production, use proper auth)
-      localStorage.setItem("userId", userId);
-      router.push("/chat");
-    } catch (err: any) {
-      const errorMessage = err.message || "An error occurred";
-      setError(errorMessage);
-      toast.error("Error", {
-        description: errorMessage,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+                <AdBanner type="banner_728x90" className="w-full h-[100px]" />
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Welcome Back" : "Create Account"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin
-              ? "Enter your credentials to access your account"
-              : "Enter your information to create a new account"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email (optional)
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-sm font-medium">
-                Username
-              </label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
+                {/* Trending Section */}
+                <section>
+                    <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                        <span className="text-red-600">🔥</span> Trending
+                    </h2>
+                    {trendingVideos === undefined ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="space-y-3">
+                                    <div className="aspect-video bg-muted rounded-xl animate-pulse" />
+                                    <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {trendingVideos.map((video) => (
+                                <VideoCard key={video._id} video={video} author={getAuthor(video.authorId)} />
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* All Videos Section */}
+                <section>
+                    <h2 className="text-2xl font-bold mb-6">All Videos</h2>
+                    {videos === undefined ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {[...Array(8)].map((_, i) => (
+                                <div key={i} className="space-y-3">
+                                    <div className="aspect-video bg-muted rounded-xl animate-pulse" />
+                                    <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                                    <div className="h-4 w-1/2 bg-muted rounded animate-pulse" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {videos.map((video) => (
+                                <VideoCard key={video._id} video={video} author={getAuthor(video.authorId)} />
+                            ))}
+                        </div>
+                    )}
+                </section>
             </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Login" : "Sign Up"}
-            </Button>
-          </form>
-
-          <div className="mt-4 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-              }}
-              className="text-primary hover:underline"
-            >
-              {isLogin
-                ? "Don't have an account? Sign up"
-                : "Already have an account? Login"}
-            </button>
         </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    );
 }

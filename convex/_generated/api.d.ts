@@ -8,14 +8,12 @@
  * @module
  */
 
-import type * as auth from "../auth.js";
-import type * as chats from "../chats.js";
-import type * as friendRequests from "../friendRequests.js";
-import type * as media from "../media.js";
-import type * as messageActions from "../messageActions.js";
-import type * as profile from "../profile.js";
-import type * as typing from "../typing.js";
-import type * as userSettings from "../userSettings.js";
+import type * as comments from "../comments.js";
+import type * as likes from "../likes.js";
+import type * as posts from "../posts.js";
+import type * as subscriptions from "../subscriptions.js";
+import type * as users from "../users.js";
+import type * as videos from "../videos.js";
 
 import type {
   ApiFromModules,
@@ -24,14 +22,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  auth: typeof auth;
-  chats: typeof chats;
-  friendRequests: typeof friendRequests;
-  media: typeof media;
-  messageActions: typeof messageActions;
-  profile: typeof profile;
-  typing: typeof typing;
-  userSettings: typeof userSettings;
+  comments: typeof comments;
+  likes: typeof likes;
+  posts: typeof posts;
+  subscriptions: typeof subscriptions;
+  users: typeof users;
+  videos: typeof videos;
 }>;
 
 /**
