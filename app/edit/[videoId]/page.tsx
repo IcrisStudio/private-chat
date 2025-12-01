@@ -72,6 +72,22 @@ export default function EditVideoPage() {
         setIsGenerating(true);
         setGeneratedThumbnails([]);
 
+        // Ensure metadata is loaded
+        if (videoEl.readyState < 1) {
+            try {
+                await new Promise((resolve, reject) => {
+                    videoEl.onloadedmetadata = resolve;
+                    videoEl.onerror = reject;
+                    // Timeout after 5s
+                    setTimeout(() => reject(new Error("Video load timeout")), 5000);
+                });
+            } catch (e) {
+                toast.error("Please wait for video to load");
+                setIsGenerating(false);
+                return;
+            }
+        }
+
         const frames: string[] = [];
         const count = 5;
 
@@ -185,6 +201,7 @@ export default function EditVideoPage() {
                                         ref={videoRef}
                                         src={videoUrl}
                                         controls
+                                        crossOrigin="anonymous"
                                         className="w-full aspect-video rounded-lg bg-black"
                                     />
                                 )}
