@@ -41,7 +41,7 @@ export default function Home() {
     const renderVideosWithAds = () => {
         if (!videos) return null;
 
-        const elements = [];
+        const elements: React.JSX.Element[] = [];
         const videosPerRow = 4; // xl:grid-cols-4
         const rowsBeforeAd = 2; // Show ad after every 2 rows
         const videosBeforeAd = videosPerRow * rowsBeforeAd; // 8 videos

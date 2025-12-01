@@ -27,7 +27,7 @@ function SearchResults() {
     const renderResultsWithAds = () => {
         if (!results) return null;
 
-        const elements: JSX.Element[] = [];
+        const elements: React.JSX.Element[] = [];
         const videosBeforeAd = 8; // Show ad after every 8 videos
 
         results.forEach((video, index) => {
