@@ -2,9 +2,21 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const getVideos = query({
-    args: {},
-    handler: async (ctx) => {
-        return await ctx.db.query("videos").order("desc").collect();
+    args: {
+        category: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const videos = await ctx.db.query("videos").order("desc").collect();
+
+        if (args.category === "Trending") {
+            return videos.sort((a, b) => b.views - a.views);
+        }
+
+        if (args.category && args.category !== "All") {
+            return videos.filter(v => v.category === args.category);
+        }
+
+        return videos;
     },
 });
 
@@ -50,24 +62,26 @@ export const generateUploadUrl = mutation({
 
 export const createVideo = mutation({
     args: {
-        title: v.string(),
-        description: v.string(),
+        title: v.optional(v.string()),
+        description: v.optional(v.string()),
         storageId: v.string(),
         authorId: v.id("users"),
         size: v.optional(v.number()),
         isPremium: v.optional(v.boolean()),
         thumbnailStorageId: v.optional(v.string()),
+        category: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("videos", {
-            title: args.title,
-            description: args.description,
+            title: args.title || "Untitled Video",
+            description: args.description || "",
             storageId: args.storageId,
             authorId: args.authorId,
             views: 0,
             size: args.size,
             isPremium: args.isPremium || false,
             thumbnailStorageId: args.thumbnailStorageId,
+            category: args.category || "Amateur",
             likes: 0,
             dislikes: 0,
         });
@@ -167,6 +181,8 @@ export const updateVideo = mutation({
         videoId: v.id("videos"),
         title: v.optional(v.string()),
         description: v.optional(v.string()),
+        category: v.optional(v.string()),
+        thumbnailStorageId: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const { videoId, ...updates } = args;

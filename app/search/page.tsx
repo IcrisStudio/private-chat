@@ -6,6 +6,8 @@ import { Navbar } from "@/components/Navbar";
 import { VideoCard } from "@/components/VideoCard";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { AdScript } from "@/components/AdScript";
+import { ModalAd } from "@/components/ModalAd";
 
 function SearchResults() {
     const searchParams = useSearchParams();
@@ -21,8 +23,48 @@ function SearchResults() {
 
     const getAuthor = (authorId: any) => authors?.find((a) => a._id === authorId);
 
+    // Function to render search results with ads
+    const renderResultsWithAds = () => {
+        if (!results) return null;
+
+        const elements: JSX.Element[] = [];
+        const videosBeforeAd = 8; // Show ad after every 8 videos
+
+        results.forEach((video, index) => {
+            elements.push(
+                <VideoCard
+                    key={video._id}
+                    video={video}
+                    author={getAuthor(video.authorId)}
+                />
+            );
+
+            // Insert ad after every 8 videos
+            if ((index + 1) % videosBeforeAd === 0 && index < results.length - 1) {
+                elements.push(
+                    <div key={`ad-${index}`} className="col-span-full flex justify-center my-6">
+                        <AdScript
+                            id={`box-ad-search-${index}`}
+                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        />
+                    </div>
+                );
+            }
+        });
+
+        return elements;
+    };
+
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 space-y-6">
+            {/* Top Banner Ad */}
+            <div className="flex justify-center">
+                <AdScript
+                    id="banner-top-search"
+                    script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                />
+            </div>
+
             <h1 className="text-3xl font-bold mb-6">
                 Search Results for "{query}"
             </h1>
@@ -44,15 +86,19 @@ function SearchResults() {
                     </p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {results.map((video) => (
-                        <VideoCard
-                            key={video._id}
-                            video={video}
-                            author={getAuthor(video.authorId)}
+                <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {renderResultsWithAds()}
+                    </div>
+
+                    {/* Bottom Banner Ad */}
+                    <div className="flex justify-center mt-8">
+                        <AdScript
+                            id="banner-bottom-search"
+                            script='<script async="async" data-cfasync="false" src="//pl28167338.effectivegatecpm.com/74b73373d996a165f6b61daf0f098d07/invoke.js"></script><div id="container-74b73373d996a165f6b61daf0f098d07"></div>'
                         />
-                    ))}
-                </div>
+                    </div>
+                </>
             )}
         </div>
     );

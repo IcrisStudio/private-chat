@@ -15,9 +15,10 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, author }: VideoCardProps) {
-    const thumbnailUrl = useQuery(api.videos.getThumbnailUrl, {
-        storageId: video.thumbnailStorageId
-    });
+    const thumbnailUrl = useQuery(
+        api.videos.getThumbnailUrl,
+        video.thumbnailStorageId ? { storageId: video.thumbnailStorageId } : "skip"
+    );
 
     return (
         <Link href={`/watch/${video._id}`}>

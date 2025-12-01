@@ -16,16 +16,33 @@ interface EditVideoModalProps {
     videoId: Id<"videos">;
     initialTitle: string;
     initialDescription: string;
+    initialCategory: string;
 }
+
+const CATEGORIES = [
+    "Amateur",
+    "Professional",
+    "Homemade",
+    "Couples",
+    "Solo Female",
+    "Solo Male",
+    "Group",
+    "Fetish",
+    "Roleplay",
+    "POV",
+    "Other"
+];
 
 export function EditVideoModal({
     videoId,
     initialTitle,
     initialDescription,
+    initialCategory,
 }: EditVideoModalProps) {
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState(initialTitle);
     const [description, setDescription] = useState(initialDescription);
+    const [category, setCategory] = useState(initialCategory);
 
     const updateVideo = useMutation(api.videos.updateVideo);
 
@@ -35,6 +52,7 @@ export function EditVideoModal({
                 videoId,
                 title,
                 description,
+                category,
             });
 
             toast.success("Video updated successfully");
@@ -74,6 +92,21 @@ export function EditVideoModal({
                             onChange={(e) => setDescription(e.target.value)}
                             className="min-h-[100px]"
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="category">Category</Label>
+                        <select
+                            id="category"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {CATEGORIES.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <Button onClick={handleUpdate} className="w-full">
                         Save Changes

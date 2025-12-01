@@ -14,6 +14,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ThumbsUp, ThumbsDown, Share2, Reply, Lock } from "lucide-react";
 import { EditVideoModal } from "@/components/EditVideoModal";
+import { AdScript } from "@/components/AdScript";
+import { VideoCard } from "@/components/VideoCard";
 
 export default function WatchPage() {
     const params = useParams();
@@ -23,6 +25,13 @@ export default function WatchPage() {
     const videoUrl = useQuery(api.videos.getVideoUrl, { storageId: video?.storageId || "" });
     const author = useQuery(api.users.getUser, { userId: video?.authorId });
     const incrementView = useMutation(api.videos.incrementView);
+
+    // Fetch all videos for sidebar
+    const allVideos = useQuery(api.videos.getVideos, {});
+    const sidebarVideos = allVideos?.filter(v => v._id !== videoId).slice(0, 10) || [];
+    const uniqueAuthorIds = sidebarVideos ? [...new Set(sidebarVideos.map(v => v.authorId))] : [];
+    const sidebarAuthors = useQuery(api.users.getUsers, uniqueAuthorIds.length > 0 ? { userIds: uniqueAuthorIds } : "skip");
+    const getAuthor = (authorId: any) => sidebarAuthors?.find(a => a._id === authorId);
 
     const [currentUserId, setCurrentUserId] = useState<Id<"users"> | null>(null);
     useEffect(() => {
@@ -76,6 +85,14 @@ export default function WatchPage() {
             <Navbar />
             <div className="container mx-auto px-4 py-6 grid lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-4">
+                    {/* Banner Ad Above Video */}
+                    <div className="flex justify-center">
+                        <AdScript
+                            id="banner-above-video"
+                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        />
+                    </div>
+
                     <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative group">
                         {videoUrl ? (
                             <>
@@ -121,7 +138,7 @@ export default function WatchPage() {
                             </div>
                             <div className="flex gap-2">
                                 {author && currentUserId === author._id && (
-                                    <EditVideoModal videoId={videoId} initialTitle={video.title} initialDescription={video.description} />
+                                    <EditVideoModal videoId={videoId} initialTitle={video.title} initialDescription={video.description} initialCategory={video.category || "Amateur"} />
                                 )}
                                 <div className="flex items-center bg-secondary rounded-full p-1">
                                     <Button variant="ghost" size="sm" className={`rounded-l-full gap-2 ${likeStatus === "like" ? "text-blue-600" : ""}`} onClick={() => handleLike("like")}>
@@ -151,12 +168,52 @@ export default function WatchPage() {
                     </div>
 
                     <CommentsSection videoId={videoId} currentUserId={currentUserId} />
+
+                    {/* Banner Ad Below Comments */}
+                    <div className="flex justify-center py-4">
+                        <AdScript
+                            id="banner-below-comments"
+                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Up Next</h3>
+                    {/* Banner Ad Top of Sidebar */}
+                    <div className="flex justify-center">
+                        <AdScript
+                            id="banner-sidebar-top"
+                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        />
+                    </div>
+
+                    <h3 className="font-semibold text-lg">More Videos</h3>
                     <div className="space-y-4">
-                        <p className="text-muted-foreground text-sm">More videos coming soon...</p>
+                        {sidebarVideos.map((video, index) => (
+                            <div key={video._id}>
+                                <VideoCard video={video} author={getAuthor(video.authorId)} />
+                                {/* Insert box ad after every 3 videos */}
+                                {(index + 1) % 3 === 0 && index < sidebarVideos.length - 1 && (
+                                    <div className="my-4">
+                                        <AdScript
+                                            id={`box-ad-sidebar-${index}`}
+                                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {sidebarVideos.length === 0 && (
+                            <p className="text-muted-foreground text-sm">No more videos available.</p>
+                        )}
+                    </div>
+
+                    {/* Banner Ad Bottom of Sidebar */}
+                    <div className="flex justify-center mt-4">
+                        <AdScript
+                            id="banner-sidebar-bottom"
+                            script='<script async="async" data-cfasync="false" src="//pl28167338.effectivegatecpm.com/74b73373d996a165f6b61daf0f098d07/invoke.js"></script><div id="container-74b73373d996a165f6b61daf0f098d07"></div>'
+                        />
                     </div>
                 </div>
             </div>

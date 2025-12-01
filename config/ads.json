@@ -1,0 +1,32 @@
+{
+    "ads": [
+        {
+            "name": "Native Banner",
+            "type": "native_banner",
+            "placement": "body",
+            "description": "4:1 Widget layout - Can be placed anywhere in the page body",
+            "script": "<script async=\"async\" data-cfasync=\"false\" src=\"//pl28167338.effectivegatecpm.com/74b73373d996a165f6b61daf0f098d07/invoke.js\"></script>\n<div id=\"container-74b73373d996a165f6b61daf0f098d07\"></div>"
+        },
+        {
+            "name": "Social Bar",
+            "type": "social_bar",
+            "placement": "before_body_close",
+            "description": "Insert right above the closing </body> tag",
+            "script": "<script type='text/javascript' src='//pl28167387.effectivegatecpm.com/07/83/82/078382b28bb4e211e23de8df852d2421.js'></script>"
+        },
+        {
+            "name": "Popunder",
+            "type": "popunder",
+            "placement": "before_head_close",
+            "description": "Paste right before the closing </head> tag. Use one popunder per page for best results.",
+            "script": "<script type='text/javascript' src='//pl28167398.effectivegatecpm.com/ac/d7/5e/acd75e32eb6aeacdfedfed8e6158593d.js'></script>"
+        },
+        {
+            "name": "Banner 728x90",
+            "type": "banner_728x90",
+            "placement": "body",
+            "description": "Place anywhere in the page body",
+            "script": "<script type=\"text/javascript\">\n\tatOptions = {\n\t\t'key' : '6b0cf0d29e8605091ae3a4bfe3da7a74',\n\t\t'format' : 'iframe',\n\t\t'height' : 90,\n\t\t'width' : 728,\n\t\t'params' : {}\n\t};\n</script>\n<script type=\"text/javascript\" src=\"//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js\"></script>"
+        }
+    ]
+}

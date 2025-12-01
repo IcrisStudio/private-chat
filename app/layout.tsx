@@ -3,12 +3,14 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { Toaster } from "@/components/ui/sonner";
+import { AgeVerificationModal } from "@/components/AgeVerificationModal";
+import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Video Platform",
-  description: "A video sharing platform",
+  title: "Adult Video Platform",
+  description: "Adult content video sharing platform",
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -28,10 +30,17 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <AgeVerificationModal />
             {children}
             <Toaster />
           </ThemeProvider>
         </ConvexClientProvider>
+
+        {/* Popunder Ad - Global */}
+        <Script
+          src="//pl28167398.effectivegatecpm.com/ac/d7/5e/acd75e32eb6aeacdfedfed8e6158593d.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

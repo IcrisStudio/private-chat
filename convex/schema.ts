@@ -28,6 +28,7 @@ export default defineSchema({
         thumbnailUrl: v.optional(v.string()),
         thumbnailStorageId: v.optional(v.string()),
         isPremium: v.optional(v.boolean()),
+        category: v.optional(v.string()),
         likes: v.optional(v.number()),
         dislikes: v.optional(v.number()),
     })
