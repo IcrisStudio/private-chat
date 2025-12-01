@@ -1,169 +1,147 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { Lock, Eye, EyeOff } from "lucide-react";
 
 export default function AdminPage() {
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
-    // Upload state
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [file, setFile] = useState<File | null>(null);
-    const [uploading, setUploading] = useState(false);
-
-    const generateUploadUrl = useMutation(api.videos.generateUploadUrl);
-    const createVideo = useMutation(api.videos.createVideo);
-    const getOrCreateAdmin = useMutation(api.users.getOrCreateAdmin);
+    const users = useQuery(api.users.getAllUsers);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
         if (username === "admin" && password === "admin") {
-            setIsAdmin(true);
-            toast.success("Logged in as Admin");
+            setIsAuthenticated(true);
+            toast.success("Welcome Admin");
         } else {
             toast.error("Invalid credentials");
         }
     };
 
-    const handleUpload = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!file) return;
-
-        setUploading(true);
-        try {
-            const adminId = await getOrCreateAdmin();
-            const postUrl = await generateUploadUrl();
-            const result = await fetch(postUrl, {
-                method: "POST",
-                headers: { "Content-Type": file.type },
-                body: file,
-            });
-            const { storageId } = await result.json();
-
-            await createVideo({
-                title,
-                description,
-                storageId,
-                authorId: adminId,
-                size: file.size,
-            });
-
-            toast.success("Video uploaded successfully!");
-            setTitle("");
-            setDescription("");
-            setFile(null);
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to upload video");
-        } finally {
-            setUploading(false);
-        }
+    const togglePasswordVisibility = (userId: string) => {
+        setShowPasswords(prev => ({
+            ...prev,
+            [userId]: !prev[userId]
+        }));
     };
 
-    if (!isAdmin) {
+    if (!isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-muted/50">
-                <Card className="w-full max-w-md">
-                    <CardHeader>
-                        <CardTitle>Admin Login</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="username">Username</Label>
-                                <Input
-                                    id="username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Enter username"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter password"
-                                />
-                            </div>
-                            <Button type="submit" className="w-full">
-                                Login
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
+            <div className="min-h-screen bg-background flex flex-col">
+                <Navbar />
+                <div className="flex-1 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md">
+                        <CardHeader>
+                            <CardTitle className="text-2xl text-center">Admin Login</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="username">Username</Label>
+                                    <Input
+                                        id="username"
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        placeholder="Enter admin username"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        placeholder="Enter admin password"
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full">
+                                    Login
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto py-10">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                <Button variant="outline" onClick={() => window.location.reload()}>Logout</Button>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-2">
+        <div className="min-h-screen bg-background">
+            <Navbar />
+            <div className="container mx-auto py-10 px-4">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Upload Video</CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>User Database</CardTitle>
+                        <Button variant="outline" onClick={() => setIsAuthenticated(false)}>
+                            Logout
+                        </Button>
                     </CardHeader>
                     <CardContent>
-                        <form onSubmit={handleUpload} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="title">Title</Label>
-                                <Input
-                                    id="title"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Video title"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="desc">Description</Label>
-                                <Textarea
-                                    id="desc"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Video description"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="file">Video File</Label>
-                                <Input
-                                    id="file"
-                                    type="file"
-                                    accept="video/*"
-                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                                />
-                            </div>
-                            <Button type="submit" disabled={uploading || !file} className="w-full">
-                                {uploading ? "Uploading..." : "Upload Video"}
-                            </Button>
-                        </form>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Uploads</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground">List of videos will appear here...</p>
-                        {/* TODO: List videos */}
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>ID</TableHead>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Encoded Password</TableHead>
+                                        <TableHead>Channel</TableHead>
+                                        <TableHead>Created At</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {users?.map((user) => (
+                                        <TableRow key={user._id}>
+                                            <TableCell className="font-mono text-xs">{user._id}</TableCell>
+                                            <TableCell>{user.name}</TableCell>
+                                            <TableCell>{user.email}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="bg-muted px-2 py-1 rounded text-xs">
+                                                        {showPasswords[user._id] ? user.password : "••••••••"}
+                                                    </code>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => togglePasswordVisibility(user._id)}
+                                                    >
+                                                        {showPasswords[user._id] ? (
+                                                            <EyeOff className="h-3 w-3" />
+                                                        ) : (
+                                                            <Eye className="h-3 w-3" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{user.isChannel ? "Yes" : "No"}</TableCell>
+                                            <TableCell>{new Date(user._creationTime).toLocaleDateString()}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {users?.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center h-24">
+                                                No users found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
