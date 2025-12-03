@@ -34,6 +34,26 @@ export const getPosts = query({
     },
 });
 
+export const getAllPosts = query({
+    args: {},
+    handler: async (ctx) => {
+        const posts = await ctx.db
+            .query("posts")
+            .order("desc")
+            .take(50); // Limit to 50 most recent posts
+
+        // Enrich with author info
+        const postsWithAuthors = await Promise.all(
+            posts.map(async (post) => {
+                const author = await ctx.db.get(post.authorId);
+                return { ...post, author };
+            })
+        );
+
+        return postsWithAuthors;
+    },
+});
+
 export const deletePost = mutation({
     args: { postId: v.id("posts") },
     handler: async (ctx, args) => {

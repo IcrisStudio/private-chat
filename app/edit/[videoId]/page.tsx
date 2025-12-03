@@ -78,7 +78,6 @@ export default function EditVideoPage() {
                 await new Promise((resolve, reject) => {
                     videoEl.onloadedmetadata = resolve;
                     videoEl.onerror = reject;
-                    // Timeout after 5s
                     setTimeout(() => reject(new Error("Video load timeout")), 5000);
                 });
             } catch (e) {
@@ -96,23 +95,46 @@ export default function EditVideoPage() {
                 videoEl.currentTime = time;
                 videoEl.onseeked = () => {
                     const canvas = document.createElement("canvas");
-                    canvas.width = videoEl.videoWidth;
-                    canvas.height = videoEl.videoHeight;
+                    // Force 16:9 HD resolution
+                    canvas.width = 1280;
+                    canvas.height = 720;
                     const ctx = canvas.getContext("2d");
-                    ctx?.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                    if (!ctx) return;
+
+                    // Fill black background
+                    ctx.fillStyle = "#000000";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Calculate scaling to fit video within canvas (contain)
+                    const scale = Math.min(
+                        canvas.width / videoEl.videoWidth,
+                        canvas.height / videoEl.videoHeight
+                    );
+
+                    const w = videoEl.videoWidth * scale;
+                    const h = videoEl.videoHeight * scale;
+                    const x = (canvas.width - w) / 2;
+                    const y = (canvas.height - h) / 2;
+
+                    ctx.drawImage(videoEl, x, y, w, h);
+
                     canvas.toBlob((blob) => {
                         if (blob) resolve(URL.createObjectURL(blob));
-                    }, "image/jpeg");
+                    }, "image/jpeg", 0.8); // 80% quality for speed
                 };
             });
         };
 
         try {
+            // Generate all thumbnails in parallel for speed? 
+            // No, seeking must be sequential on a single video element.
+            // But we can reduce the delay.
+
             for (let i = 0; i < count; i++) {
                 const randomTime = videoEl.duration * (0.1 + Math.random() * 0.8);
                 const url = await capture(randomTime);
                 frames.push(url);
-                await new Promise(r => setTimeout(r, 100));
+                // Removed artificial delay for speed
             }
             setGeneratedThumbnails(frames);
             toast.success("Thumbnails generated!");

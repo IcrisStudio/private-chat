@@ -101,7 +101,7 @@ export default function ChannelPage() {
         setGeneratedThumbnails([]);
 
         const frames: string[] = [];
-        const count = 4; // Generate 4 thumbnails
+        const count = 5; // Generate 5 thumbnails
 
         // Helper to capture frame
         const capture = (time: number): Promise<string> => {
@@ -109,13 +109,32 @@ export default function ChannelPage() {
                 video.currentTime = time;
                 video.onseeked = () => {
                     const canvas = document.createElement("canvas");
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    // Force 16:9 HD resolution
+                    canvas.width = 1280;
+                    canvas.height = 720;
                     const ctx = canvas.getContext("2d");
-                    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    if (!ctx) return;
+
+                    // Fill black background
+                    ctx.fillStyle = "#000000";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Calculate scaling to fit video within canvas (contain)
+                    const scale = Math.min(
+                        canvas.width / video.videoWidth,
+                        canvas.height / video.videoHeight
+                    );
+
+                    const w = video.videoWidth * scale;
+                    const h = video.videoHeight * scale;
+                    const x = (canvas.width - w) / 2;
+                    const y = (canvas.height - h) / 2;
+
+                    ctx.drawImage(video, x, y, w, h);
+
                     canvas.toBlob((blob) => {
                         if (blob) resolve(URL.createObjectURL(blob));
-                    }, "image/jpeg");
+                    }, "image/jpeg", 0.8);
                 };
             });
         };
@@ -125,8 +144,7 @@ export default function ChannelPage() {
                 const randomTime = video.duration * (0.1 + Math.random() * 0.8);
                 const url = await capture(randomTime);
                 frames.push(url);
-                // Small delay to allow UI to update if needed, though loop is async
-                await new Promise(r => setTimeout(r, 100));
+                // Removed delay for speed
             }
             setGeneratedThumbnails(frames);
             toast.success("Thumbnails generated!");

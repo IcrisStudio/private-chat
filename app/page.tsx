@@ -8,6 +8,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AdScript } from "@/components/AdScript";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatDistanceToNow } from "date-fns";
 
 const CATEGORIES = [
     "Trending",
@@ -21,7 +24,8 @@ const CATEGORIES = [
     "Group",
     "Fetish",
     "Roleplay",
-    "POV"
+    "POV",
+    "Community" // Add Community tab
 ];
 
 export default function Home() {
@@ -30,6 +34,12 @@ export default function Home() {
     const videos = useQuery(api.videos.getVideos, {
         category: selectedCategory === "Trending" ? "Trending" : (selectedCategory === "All" ? undefined : selectedCategory)
     });
+
+    // Fetch community posts when Community tab is selected
+    const communityPosts = useQuery(
+        api.posts.getAllPosts,
+        selectedCategory === "Community" ? {} : "skip"
+    );
 
     // Extract author IDs to fetch user details
     const uniqueAuthorIds = videos ? [...new Set(videos.map(v => v.authorId))] : [];
@@ -93,11 +103,11 @@ export default function Home() {
             </div>
 
             <div className="container mx-auto px-4 py-8 space-y-8">
-                {/* Top Banner Ad */}
+                {/* Top Box Ad */}
                 <div className="flex justify-center">
                     <AdScript
-                        id="banner-top-home"
-                        script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        id="box-top-home"
+                        script='<script async="async" data-cfasync="false" src="//pl28167338.effectivegatecpm.com/74b73373d996a165f6b61daf0f098d07/invoke.js"></script><div id="container-74b73373d996a165f6b61daf0f098d07"></div>'
                     />
                 </div>
 
@@ -145,6 +155,68 @@ export default function Home() {
                         </>
                     )}
                 </section>
+
+                {/* Community Posts Section */}
+                {selectedCategory === "Community" && (
+                    <section>
+                        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <span>💬</span> Community Posts
+                        </h2>
+
+                        {communityPosts === undefined ? (
+                            <div className="space-y-4">
+                                {[...Array(5)].map((_, i) => (
+                                    <Card key={i}>
+                                        <CardContent className="pt-6">
+                                            <div className="flex gap-4">
+                                                <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-4 w-1/4 bg-muted rounded animate-pulse" />
+                                                    <div className="h-4 w-3/4 bg-muted rounded animate-pulse" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : communityPosts.length === 0 ? (
+                            <div className="text-center py-20">
+                                <p className="text-muted-foreground text-lg">No community posts yet.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {communityPosts.map((post) => (
+                                    <Card key={post._id}>
+                                        <CardContent className="pt-6">
+                                            <div className="flex gap-4">
+                                                <Avatar>
+                                                    <AvatarImage src={post.author?.image} />
+                                                    <AvatarFallback>{post.author?.name?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="font-semibold">{post.author?.name}</span>
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {formatDistanceToNow(new Date(post._creationTime), { addSuffix: true })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="whitespace-pre-wrap">{post.text}</p>
+                                                    {post.imageUrl && (
+                                                        <img
+                                                            src={post.imageUrl}
+                                                            alt="Post image"
+                                                            className="mt-4 rounded-lg max-w-full h-auto"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
             </div>
         </div>
     );

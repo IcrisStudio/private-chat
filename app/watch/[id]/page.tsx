@@ -12,7 +12,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ThumbsUp, ThumbsDown, Share2, Reply, Lock } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Reply, Lock, X } from "lucide-react";
 import { EditVideoModal } from "@/components/EditVideoModal";
 import { AdScript } from "@/components/AdScript";
 import { VideoCard } from "@/components/VideoCard";
@@ -34,6 +34,11 @@ export default function WatchPage() {
     const getAuthor = (authorId: any) => sidebarAuthors?.find(a => a._id === authorId);
 
     const [currentUserId, setCurrentUserId] = useState<Id<"users"> | null>(null);
+    const [showVideoAd, setShowVideoAd] = useState(false);
+    const [adCountdown, setAdCountdown] = useState(5);
+    const [canSkipAd, setCanSkipAd] = useState(false);
+    const videoRef = useState<HTMLVideoElement | null>(null);
+
     useEffect(() => {
         const storedId = localStorage.getItem("userId");
         if (storedId) setCurrentUserId(storedId as Id<"users">);
@@ -71,9 +76,43 @@ export default function WatchPage() {
         toast.success("Link copied to clipboard!");
     };
 
+    const handleSkipAd = () => {
+        setShowVideoAd(false);
+        setCanSkipAd(false);
+        setAdCountdown(5);
+    };
+
+    // Ad countdown timer
+    useEffect(() => {
+        if (showVideoAd && adCountdown > 0) {
+            const timer = setTimeout(() => {
+                setAdCountdown(adCountdown - 1);
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else if (showVideoAd && adCountdown === 0) {
+            setCanSkipAd(true);
+        }
+    }, [showVideoAd, adCountdown]);
+
+    // Track video views and show ads
     useEffect(() => {
         if (videoId) {
             incrementView({ id: videoId, userId: currentUserId || undefined });
+
+            // Video ad logic: show ads for 3 videos, skip 3 videos, repeat
+            const videoWatchCount = parseInt(localStorage.getItem("videoWatchCount") || "0");
+            const newCount = videoWatchCount + 1;
+            localStorage.setItem("videoWatchCount", newCount.toString());
+
+            // Pattern: videos 1-3 show ads, 4-6 no ads, 7-9 show ads, etc.
+            const cyclePosition = ((newCount - 1) % 6) + 1; // 1-6
+            const shouldShowAd = cyclePosition <= 3; // Show ad for positions 1, 2, 3
+
+            if (shouldShowAd) {
+                setShowVideoAd(true);
+                setAdCountdown(5);
+                setCanSkipAd(false);
+            }
         }
     }, [videoId, incrementView]);
 
@@ -83,7 +122,20 @@ export default function WatchPage() {
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
-            <div className="container mx-auto px-4 py-6 grid lg:grid-cols-3 gap-8">
+
+            {/* Top Banner Ad - Full Width */}
+            <div className="w-full bg-muted/30 py-4">
+                <div className="container mx-auto px-4 flex justify-center">
+                    <div className="max-w-full overflow-hidden">
+                        <AdScript
+                            id="banner-top-watch-page"
+                            script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="container mx-auto px-4 py-6 flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:gap-8">
                 <div className="lg:col-span-2 space-y-4">
                     {/* Banner Ad Above Video */}
                     <div className="flex justify-center">
@@ -93,20 +145,61 @@ export default function WatchPage() {
                         />
                     </div>
 
-                    <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative group">
+                    <div className="w-full aspect-video bg-black rounded-lg lg:rounded-xl overflow-hidden shadow-lg relative group">
                         {videoUrl ? (
                             <>
                                 <video
+                                    ref={(el) => { if (el && showVideoAd) el.pause(); }}
                                     src={videoUrl}
                                     controls={!video.isPremium || isSubscribed || currentUserId === author?._id}
-                                    autoPlay
-                                    className={`w-full h-full ${video.isPremium && !isSubscribed && currentUserId !== author?._id ? "blur-xl" : ""}`}
+                                    autoPlay={!showVideoAd}
+                                    playsInline
+                                    webkit-playsinline="true"
+                                    className={`w-full h-full object-contain ${video.isPremium && !isSubscribed && currentUserId !== author?._id ? "blur-xl" : ""}`}
                                 />
+
+                                {/* Video Ad Overlay */}
+                                {showVideoAd && (
+                                    <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+                                        <div className="w-full max-w-2xl">
+                                            {/* Ad Container */}
+                                            <div className="bg-white rounded-lg p-4 mb-4">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs text-gray-600">Advertisement</span>
+                                                    {canSkipAd && (
+                                                        <button
+                                                            onClick={handleSkipAd}
+                                                            className="flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                                                        >
+                                                            Skip Ad <X className="h-3 w-3" />
+                                                        </button>
+                                                    )}
+                                                    {!canSkipAd && (
+                                                        <span className="text-xs text-gray-600">
+                                                            Skip in {adCountdown}s
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {/* Banner Ad */}
+                                                <div className="flex justify-center bg-gray-100 rounded min-h-[90px] items-center">
+                                                    <AdScript
+                                                        id="video-overlay-ad"
+                                                        script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
+                                                    />
+                                                </div>
+                                            </div>
+                                            <p className="text-white text-center text-sm">
+                                                Your video will play after the ad
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {video.isPremium && !isSubscribed && currentUserId !== author?._id && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10">
-                                        <Lock className="h-12 w-12 text-white mb-4" />
-                                        <h2 className="text-2xl font-bold text-white mb-2">Premium Content</h2>
-                                        <p className="text-white/80 mb-6">Subscribe to this channel to unlock this video.</p>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10 p-4">
+                                        <Lock className="h-10 w-10 md:h-12 md:w-12 text-white mb-4" />
+                                        <h2 className="text-xl md:text-2xl font-bold text-white mb-2 text-center">Premium Content</h2>
+                                        <p className="text-white/80 mb-6 text-center text-sm md:text-base">Subscribe to this channel to unlock this video.</p>
                                         <Button size="lg" onClick={handleSubscribe}>Subscribe to Unlock</Button>
                                     </div>
                                 )}
@@ -117,7 +210,7 @@ export default function WatchPage() {
                     </div>
 
                     <div className="space-y-4">
-                        <h1 className="text-2xl font-bold">{video.title}</h1>
+                        <h1 className="text-xl md:text-2xl font-bold">{video.title}</h1>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-10 w-10">
@@ -136,24 +229,24 @@ export default function WatchPage() {
                                     </Button>
                                 )}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {author && currentUserId === author._id && (
                                     <EditVideoModal videoId={videoId} initialTitle={video.title} initialDescription={video.description} initialCategory={video.category || "Amateur"} />
                                 )}
                                 <div className="flex items-center bg-secondary rounded-full p-1">
-                                    <Button variant="ghost" size="sm" className={`rounded-l-full gap-2 ${likeStatus === "like" ? "text-blue-600" : ""}`} onClick={() => handleLike("like")}>
-                                        <ThumbsUp className="h-4 w-4" />
-                                        {video.likes || 0}
+                                    <Button variant="ghost" size="sm" className={`rounded-l-full gap-1 md:gap-2 text-xs md:text-sm ${likeStatus === "like" ? "text-blue-600" : ""}`} onClick={() => handleLike("like")}>
+                                        <ThumbsUp className="h-3 w-3 md:h-4 md:w-4" />
+                                        <span className="hidden sm:inline">{video.likes || 0}</span>
                                     </Button>
                                     <div className="w-px h-6 bg-muted-foreground/20" />
-                                    <Button variant="ghost" size="sm" className={`rounded-r-full gap-2 ${likeStatus === "dislike" ? "text-red-600" : ""}`} onClick={() => handleLike("dislike")}>
-                                        <ThumbsDown className="h-4 w-4" />
-                                        {video.dislikes || 0}
+                                    <Button variant="ghost" size="sm" className={`rounded-r-full gap-1 md:gap-2 text-xs md:text-sm ${likeStatus === "dislike" ? "text-red-600" : ""}`} onClick={() => handleLike("dislike")}>
+                                        <ThumbsDown className="h-3 w-3 md:h-4 md:w-4" />
+                                        <span className="hidden sm:inline">{video.dislikes || 0}</span>
                                     </Button>
                                 </div>
-                                <Button variant="secondary" size="sm" className="rounded-full gap-2" onClick={handleShare}>
-                                    <Share2 className="h-4 w-4" />
-                                    Share
+                                <Button variant="secondary" size="sm" className="rounded-full gap-1 md:gap-2 text-xs md:text-sm" onClick={handleShare}>
+                                    <Share2 className="h-3 w-3 md:h-4 md:w-4" />
+                                    <span className="hidden sm:inline">Share</span>
                                 </Button>
                             </div>
                         </div>
@@ -178,7 +271,8 @@ export default function WatchPage() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                {/* Sidebar - Shows below content on mobile, beside on desktop */}
+                <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
                     {/* Banner Ad Top of Sidebar */}
                     <div className="flex justify-center">
                         <AdScript
