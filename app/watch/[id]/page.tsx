@@ -110,7 +110,24 @@ export default function WatchPage() {
                     </div>
 
                     <div className="w-full aspect-video bg-black rounded-lg lg:rounded-xl overflow-hidden shadow-lg relative group">
-                        {videoUrl ? (
+                        {video.iframeUrl ? (
+                            <>
+                                <iframe
+                                    src={video.iframeUrl}
+                                    className={`w-full h-full border-0 ${video.isPremium && !isSubscribed && currentUserId !== author?._id ? "blur-xl pointer-events-none" : ""}`}
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                                {video.isPremium && !isSubscribed && currentUserId !== author?._id && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10 p-4">
+                                        <Lock className="h-10 w-10 md:h-12 md:w-12 text-white mb-4" />
+                                        <h2 className="text-xl md:text-2xl font-bold text-white mb-2 text-center">Premium Content</h2>
+                                        <p className="text-white/80 mb-6 text-center text-sm md:text-base">Subscribe to this channel to unlock this video.</p>
+                                        <Button size="lg" onClick={handleSubscribe}>Subscribe to Unlock</Button>
+                                    </div>
+                                )}
+                            </>
+                        ) : videoUrl ? (
                             <>
                                 <video
                                     src={videoUrl}

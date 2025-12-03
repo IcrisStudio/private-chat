@@ -64,12 +64,13 @@ export const createVideo = mutation({
     args: {
         title: v.optional(v.string()),
         description: v.optional(v.string()),
-        storageId: v.string(),
+        storageId: v.optional(v.string()), // Made optional
         authorId: v.id("users"),
         size: v.optional(v.number()),
         isPremium: v.optional(v.boolean()),
         thumbnailStorageId: v.optional(v.string()),
         category: v.optional(v.string()),
+        iframeUrl: v.optional(v.string()), // New argument
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("videos", {
@@ -84,6 +85,7 @@ export const createVideo = mutation({
             category: args.category || "Amateur",
             likes: 0,
             dislikes: 0,
+            iframeUrl: args.iframeUrl,
         });
     },
 });

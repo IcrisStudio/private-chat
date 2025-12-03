@@ -21,7 +21,7 @@ export default defineSchema({
     videos: defineTable({
         title: v.string(),
         description: v.string(),
-        storageId: v.string(),
+        storageId: v.optional(v.string()), // Made optional for iframe videos
         authorId: v.id("users"),
         views: v.number(),
         size: v.optional(v.number()),
@@ -31,6 +31,7 @@ export default defineSchema({
         category: v.optional(v.string()),
         likes: v.optional(v.number()),
         dislikes: v.optional(v.number()),
+        iframeUrl: v.optional(v.string()), // New field for iframe embeds
     })
         .index("by_author", ["authorId"])
         .searchIndex("search_title", {

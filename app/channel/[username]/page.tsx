@@ -75,101 +75,11 @@ export default function ChannelPage() {
     const [progress, setProgress] = useState(0);
     const [isGeneratingThumbnails, setIsGeneratingThumbnails] = useState(false);
 
-    const videoRef = useRef<HTMLVideoElement>(null);
-
-    // Community Post Logic
-    const createPost = useMutation(api.posts.createPost);
-    const deletePost = useMutation(api.posts.deletePost);
-    const [postText, setPostText] = useState("");
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (selectedFile) {
-            setFile(selectedFile);
-            setGeneratedThumbnails([]);
-            setThumbnail(null);
-            setThumbnailPreview(null);
-            if (videoRef.current) {
-                videoRef.current.src = URL.createObjectURL(selectedFile);
-            }
-        }
-    };
-
-    const generateThumbnails = async () => {
-        if (!videoRef.current) return;
-        const video = videoRef.current;
-        setIsGeneratingThumbnails(true);
-        setGeneratedThumbnails([]);
-
-        const frames: string[] = [];
-        const count = 5; // Generate 5 thumbnails
-
-        // Helper to capture frame
-        const capture = (time: number): Promise<string> => {
-            return new Promise((resolve) => {
-                video.currentTime = time;
-                video.onseeked = () => {
-                    const canvas = document.createElement("canvas");
-                    // Force 16:9 HD resolution
-                    canvas.width = 1280;
-                    canvas.height = 720;
-                    const ctx = canvas.getContext("2d");
-                    if (!ctx) return;
-
-                    // Fill black background
-                    ctx.fillStyle = "#000000";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                    // Calculate scaling to fit video within canvas (contain)
-                    const scale = Math.min(
-                        canvas.width / video.videoWidth,
-                        canvas.height / video.videoHeight
-                    );
-
-                    const w = video.videoWidth * scale;
-                    const h = video.videoHeight * scale;
-                    const x = (canvas.width - w) / 2;
-                    const y = (canvas.height - h) / 2;
-
-                    ctx.drawImage(video, x, y, w, h);
-
-                    canvas.toBlob((blob) => {
-                        if (blob) resolve(URL.createObjectURL(blob));
-                    }, "image/jpeg", 0.8);
-                };
-            });
-        };
-
-        try {
-            for (let i = 0; i < count; i++) {
-                const randomTime = video.duration * (0.1 + Math.random() * 0.8);
-                const url = await capture(randomTime);
-                frames.push(url);
-                // Removed delay for speed
-            }
-            setGeneratedThumbnails(frames);
-            toast.success("Thumbnails generated!");
-        } catch (e) {
-            console.error(e);
-            toast.error("Failed to generate thumbnails");
-        } finally {
-            setIsGeneratingThumbnails(false);
-            video.currentTime = 0; // Reset
-        }
-    };
-
-    const selectGeneratedThumbnail = async (url: string) => {
-        setThumbnailPreview(url);
-        // Convert blob URL to File object
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const file = new File([blob], "thumbnail.jpg", { type: "image/jpeg" });
-        setThumbnail(file);
-    };
+    const [iframeUrl, setIframeUrl] = useState("");
 
     const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!file || !currentUserId || uploading) return;
+        if ((!file && !iframeUrl) || !currentUserId || uploading) return;
 
         setUploading(true);
         setProgress(0);
@@ -183,16 +93,23 @@ export default function ChannelPage() {
         }, 500);
 
         try {
-            // Upload video
-            const postUrl = await generateUploadUrl();
-            const result = await fetch(postUrl, {
-                method: "POST",
-                headers: { "Content-Type": file.type },
-                body: file,
-            });
+            let storageId: string | undefined;
+            let size = 0;
 
-            if (!result.ok) throw new Error("Video upload failed");
-            const { storageId } = await result.json();
+            // Upload video file if present
+            if (file) {
+                const postUrl = await generateUploadUrl();
+                const result = await fetch(postUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
+
+                if (!result.ok) throw new Error("Video upload failed");
+                const data = await result.json();
+                storageId = data.storageId;
+                size = file.size;
+            }
 
             // Upload thumbnail if exists
             let thumbnailStorageId: string | undefined;
@@ -213,21 +130,23 @@ export default function ChannelPage() {
                 description,
                 storageId,
                 authorId: currentUserId,
-                size: file.size,
+                size,
                 isPremium,
                 thumbnailStorageId,
                 category,
+                iframeUrl: iframeUrl || undefined,
             });
 
             clearInterval(interval);
             setProgress(100);
-            toast.success("Video uploaded successfully!");
+            toast.success("Video published successfully!");
 
             // Reset form
             setTitle("");
             setDescription("");
             setCategory("General");
             setFile(null);
+            setIframeUrl("");
             setThumbnail(null);
             setThumbnailPreview(null);
             setGeneratedThumbnails([]);
@@ -236,7 +155,7 @@ export default function ChannelPage() {
 
         } catch (error) {
             console.error(error);
-            toast.error("Failed to upload video");
+            toast.error("Failed to publish video");
         } finally {
             setUploading(false);
             setTimeout(() => setProgress(0), 1000);
@@ -478,54 +397,129 @@ export default function ChannelPage() {
 
                                 {/* Right Column: Media */}
                                 <div className="space-y-6">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Media</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label>Video File</Label>
-                                                <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
-                                                    <Input
-                                                        type="file"
-                                                        accept="video/*"
-                                                        onChange={handleFileChange}
-                                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                                    />
-                                                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                                                    <p className="text-sm font-medium">{file ? file.name : "Drag & drop or click to upload"}</p>
-                                                </div>
-                                            </div>
+                                    <Tabs defaultValue="upload" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-2">
+                                            <TabsTrigger value="upload" onClick={() => { setFile(null); setGeneratedThumbnails([]); }}>Upload Video</TabsTrigger>
+                                            <TabsTrigger value="iframe" onClick={() => { setFile(null); setGeneratedThumbnails([]); }}>Embed Iframe</TabsTrigger>
+                                        </TabsList>
 
-                                            {/* Hidden Video for Thumbnail Generation */}
-                                            <video ref={videoRef} className="hidden" crossOrigin="anonymous" />
+                                        <TabsContent value="upload" className="space-y-4 mt-4">
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Upload File</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label>Video File</Label>
+                                                        <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
+                                                            <Input
+                                                                type="file"
+                                                                accept="video/*"
+                                                                onChange={handleFileChange}
+                                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                            />
+                                                            <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                                                            <p className="text-sm font-medium">{file ? file.name : "Drag & drop or click to upload"}</p>
+                                                        </div>
+                                                    </div>
 
-                                            {file && (
-                                                <div className="space-y-4">
-                                                    <Label>Thumbnail</Label>
+                                                    {/* Hidden Video for Thumbnail Generation */}
+                                                    <video ref={videoRef} className="hidden" crossOrigin="anonymous" />
 
-                                                    {/* Generated Thumbnails Grid */}
-                                                    {generatedThumbnails.length > 0 && (
-                                                        <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                                            {generatedThumbnails.map((url, idx) => (
-                                                                <div
-                                                                    key={idx}
-                                                                    className={`relative aspect-video rounded-md overflow-hidden cursor-pointer border-2 transition-all ${thumbnailPreview === url ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-muted-foreground/50'}`}
-                                                                    onClick={() => selectGeneratedThumbnail(url)}
-                                                                >
-                                                                    <img src={url} alt={`Generated ${idx}`} className="w-full h-full object-cover" />
-                                                                    {thumbnailPreview === url && (
-                                                                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                                                            <CheckCircle2 className="text-white h-8 w-8 drop-shadow-md" />
+                                                    {file && (
+                                                        <div className="space-y-4">
+                                                            <Label>Thumbnail</Label>
+
+                                                            {/* Generated Thumbnails Grid */}
+                                                            {generatedThumbnails.length > 0 && (
+                                                                <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                                    {generatedThumbnails.map((url, idx) => (
+                                                                        <div
+                                                                            key={idx}
+                                                                            className={`relative aspect-video rounded-md overflow-hidden cursor-pointer border-2 transition-all ${thumbnailPreview === url ? 'border-primary ring-2 ring-primary ring-offset-2' : 'border-transparent hover:border-muted-foreground/50'}`}
+                                                                            onClick={() => selectGeneratedThumbnail(url)}
+                                                                        >
+                                                                            <img src={url} alt={`Generated ${idx}`} className="w-full h-full object-cover" />
+                                                                            {thumbnailPreview === url && (
+                                                                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                                                    <CheckCircle2 className="text-white h-8 w-8 drop-shadow-md" />
+                                                                                </div>
+                                                                            )}
                                                                         </div>
-                                                                    )}
+                                                                    ))}
                                                                 </div>
-                                                            ))}
+                                                            )}
+
+                                                            {/* Actions */}
+                                                            {generatedThumbnails.length === 0 && (
+                                                                <div className="flex gap-4 items-center">
+                                                                    <div className="w-32 aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center border">
+                                                                        {thumbnailPreview ? (
+                                                                            <img src={thumbnailPreview} alt="Thumbnail" className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Button size="sm" variant="outline" onClick={() => document.getElementById("thumb-upload")?.click()}>
+                                                                            Upload Custom
+                                                                        </Button>
+                                                                        <Input
+                                                                            id="thumb-upload"
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            className="hidden"
+                                                                            onChange={(e) => {
+                                                                                const f = e.target.files?.[0];
+                                                                                if (f) {
+                                                                                    setThumbnail(f);
+                                                                                    setThumbnailPreview(URL.createObjectURL(f));
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="secondary"
+                                                                            onClick={generateThumbnails}
+                                                                            disabled={isGeneratingThumbnails}
+                                                                        >
+                                                                            {isGeneratingThumbnails ? (
+                                                                                <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                                                            ) : (
+                                                                                <Sparkles className="h-3 w-3 mr-2" />
+                                                                            )}
+                                                                            Generate from Video
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
 
-                                                    {/* Actions */}
-                                                    {generatedThumbnails.length === 0 && (
+                                        <TabsContent value="iframe" className="space-y-4 mt-4">
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle>Embed Video</CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-4">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="iframe-url">Iframe URL</Label>
+                                                        <Input
+                                                            id="iframe-url"
+                                                            placeholder="https://www.domain.com/embed/..."
+                                                            value={iframeUrl}
+                                                            onChange={(e) => setIframeUrl(e.target.value)}
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Enter the direct embed URL for the video.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <Label>Thumbnail (Optional)</Label>
                                                         <div className="flex gap-4 items-center">
                                                             <div className="w-32 aspect-video bg-muted rounded-md overflow-hidden flex items-center justify-center border">
                                                                 {thumbnailPreview ? (
@@ -534,78 +528,63 @@ export default function ChannelPage() {
                                                                     <ImageIcon className="h-6 w-6 text-muted-foreground" />
                                                                 )}
                                                             </div>
-                                                            <div className="space-y-2">
-                                                                <Button size="sm" variant="outline" onClick={() => document.getElementById("thumb-upload")?.click()}>
-                                                                    Upload Custom
-                                                                </Button>
-                                                                <Input
-                                                                    id="thumb-upload"
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    className="hidden"
-                                                                    onChange={(e) => {
-                                                                        const f = e.target.files?.[0];
-                                                                        if (f) {
-                                                                            setThumbnail(f);
-                                                                            setThumbnailPreview(URL.createObjectURL(f));
-                                                                        }
-                                                                    }}
-                                                                />
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="secondary"
-                                                                    onClick={generateThumbnails}
-                                                                    disabled={isGeneratingThumbnails}
-                                                                >
-                                                                    {isGeneratingThumbnails ? (
-                                                                        <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                                                                    ) : (
-                                                                        <Sparkles className="h-3 w-3 mr-2" />
-                                                                    )}
-                                                                    Generate from Video
-                                                                </Button>
-                                                            </div>
+                                                            <Button size="sm" variant="outline" onClick={() => document.getElementById("iframe-thumb-upload")?.click()}>
+                                                                Upload Thumbnail
+                                                            </Button>
+                                                            <Input
+                                                                id="iframe-thumb-upload"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                onChange={(e) => {
+                                                                    const f = e.target.files?.[0];
+                                                                    if (f) {
+                                                                        setThumbnail(f);
+                                                                        setThumbnailPreview(URL.createObjectURL(f));
+                                                                    }
+                                                                }}
+                                                            />
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-
-                                    {uploading && (
-                                        <Card>
-                                            <CardContent className="pt-6">
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span>Uploading...</span>
-                                                        <span>{progress}%</span>
                                                     </div>
-                                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                                        <div
-                                                            className="h-full bg-primary transition-all duration-500 ease-out"
-                                                            style={{ width: `${progress}%` }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
 
-                                    <Button
-                                        size="lg"
-                                        className="w-full relative overflow-hidden"
-                                        onClick={handleUpload}
-                                        disabled={uploading || !file}
-                                    >
-                                        {uploading ? (
-                                            <div className="flex items-center gap-2">
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Publishing...
-                                            </div>
-                                        ) : (
-                                            "Publish Video"
+                                        {uploading && (
+                                            <Card className="mt-4">
+                                                <CardContent className="pt-6">
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span>Uploading...</span>
+                                                            <span>{progress}%</span>
+                                                        </div>
+                                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-primary transition-all duration-500 ease-out"
+                                                                style={{ width: `${progress}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
                                         )}
-                                    </Button>
+
+                                        <Button
+                                            size="lg"
+                                            className="w-full mt-4 relative overflow-hidden"
+                                            onClick={handleUpload}
+                                            disabled={uploading || (!file && !iframeUrl)}
+                                        >
+                                            {uploading ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Publishing...
+                                                </div>
+                                            ) : (
+                                                "Publish Video"
+                                            )}
+                                        </Button>
+                                    </Tabs>
                                 </div>
                             </div>
                         </TabsContent>
