@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Upload, User, LogOut, Moon, Sun, Monitor, Menu } from "lucide-react";
+import { Search, Upload, User, LogOut, Moon, Sun, Monitor, Menu, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "convex/react";
@@ -71,7 +71,7 @@ export function Navbar() {
                             <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" />
                         </svg>
                     </div>
-                    <span className="text-xl font-bold tracking-tight hidden sm:inline">VideoPlatform</span>
+                    <span className="text-xl font-bold tracking-tight hidden sm:inline">LuxeVault</span>
                 </Link>
             </div>
 
@@ -124,12 +124,20 @@ export function Navbar() {
                                 <DropdownMenuSeparator />
 
                                 {user?.isChannel ? (
-                                    <DropdownMenuItem asChild>
-                                        <Link href={`/channel/${user.username}`}>
-                                            <User className="mr-2 h-4 w-4" />
-                                            Your Channel
-                                        </Link>
-                                    </DropdownMenuItem>
+                                    <>
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/channel/${user.username}`}>
+                                                <User className="mr-2 h-4 w-4" />
+                                                Your Channel
+                                            </Link>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <Link href={`/dashboard/${user.username}`}>
+                                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                                Studio
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </>
                                 ) : (
                                     <DropdownMenuItem asChild>
                                         <Link href="/channel/create">

@@ -189,3 +189,17 @@ export const updateVideo = mutation({
         await ctx.db.patch(videoId, updates);
     },
 });
+
+export const deleteVideo = mutation({
+    args: { videoId: v.id("videos") },
+    handler: async (ctx, args) => {
+        const video = await ctx.db.get(args.videoId);
+        if (!video) return;
+
+        // Optional: Delete storage file if needed
+        // if (video.storageId) await ctx.storage.delete(video.storageId);
+        // if (video.thumbnailStorageId) await ctx.storage.delete(video.thumbnailStorageId);
+
+        await ctx.db.delete(args.videoId);
+    },
+});

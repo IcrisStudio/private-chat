@@ -15,9 +15,10 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VideoCard } from "@/components/VideoCard";
-import { Upload, Image as ImageIcon, Sparkles, Lock, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, Image as ImageIcon, Sparkles, Lock, Trash2, Loader2, CheckCircle2, LayoutDashboard } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { VideoTable } from "@/components/VideoTable";
+import Link from "next/link";
 
 const CATEGORIES = [
     "Amateur",
@@ -309,7 +310,15 @@ export default function ChannelPage() {
                             <span>{stats?.totalViews || 0} views</span>
                         </div>
                     </div>
-                    <div>
+                    <div className="flex gap-2">
+                        {isOwner && (
+                            <Button size="lg" variant="outline" asChild>
+                                <Link href={`/dashboard/${username}`}>
+                                    <LayoutDashboard className="h-4 w-4 mr-2" />
+                                    Dashboard
+                                </Link>
+                            </Button>
+                        )}
                         {!isOwner && (
                             <Button
                                 size="lg"

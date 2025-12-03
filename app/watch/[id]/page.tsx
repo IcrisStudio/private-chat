@@ -12,7 +12,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ThumbsUp, ThumbsDown, Share2, Reply, Lock, X } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Share2, Reply, Lock } from "lucide-react";
 import { EditVideoModal } from "@/components/EditVideoModal";
 import { AdScript } from "@/components/AdScript";
 import { VideoCard } from "@/components/VideoCard";
@@ -34,9 +34,6 @@ export default function WatchPage() {
     const getAuthor = (authorId: any) => sidebarAuthors?.find(a => a._id === authorId);
 
     const [currentUserId, setCurrentUserId] = useState<Id<"users"> | null>(null);
-    const [showVideoAd, setShowVideoAd] = useState(false);
-    const [adCountdown, setAdCountdown] = useState(5);
-    const [canSkipAd, setCanSkipAd] = useState(false);
     const videoRef = useState<HTMLVideoElement | null>(null);
 
     useEffect(() => {
@@ -76,43 +73,10 @@ export default function WatchPage() {
         toast.success("Link copied to clipboard!");
     };
 
-    const handleSkipAd = () => {
-        setShowVideoAd(false);
-        setCanSkipAd(false);
-        setAdCountdown(5);
-    };
-
-    // Ad countdown timer
-    useEffect(() => {
-        if (showVideoAd && adCountdown > 0) {
-            const timer = setTimeout(() => {
-                setAdCountdown(adCountdown - 1);
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (showVideoAd && adCountdown === 0) {
-            setCanSkipAd(true);
-        }
-    }, [showVideoAd, adCountdown]);
-
-    // Track video views and show ads
+    // Track video views
     useEffect(() => {
         if (videoId) {
             incrementView({ id: videoId, userId: currentUserId || undefined });
-
-            // Video ad logic: show ads for 3 videos, skip 3 videos, repeat
-            const videoWatchCount = parseInt(localStorage.getItem("videoWatchCount") || "0");
-            const newCount = videoWatchCount + 1;
-            localStorage.setItem("videoWatchCount", newCount.toString());
-
-            // Pattern: videos 1-3 show ads, 4-6 no ads, 7-9 show ads, etc.
-            const cyclePosition = ((newCount - 1) % 6) + 1; // 1-6
-            const shouldShowAd = cyclePosition <= 3; // Show ad for positions 1, 2, 3
-
-            if (shouldShowAd) {
-                setShowVideoAd(true);
-                setAdCountdown(5);
-                setCanSkipAd(false);
-            }
         }
     }, [videoId, incrementView]);
 
@@ -149,51 +113,13 @@ export default function WatchPage() {
                         {videoUrl ? (
                             <>
                                 <video
-                                    ref={(el) => { if (el && showVideoAd) el.pause(); }}
                                     src={videoUrl}
                                     controls={!video.isPremium || isSubscribed || currentUserId === author?._id}
-                                    autoPlay={!showVideoAd}
+                                    autoPlay
                                     playsInline
                                     webkit-playsinline="true"
                                     className={`w-full h-full object-contain ${video.isPremium && !isSubscribed && currentUserId !== author?._id ? "blur-xl" : ""}`}
                                 />
-
-                                {/* Video Ad Overlay */}
-                                {showVideoAd && (
-                                    <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
-                                        <div className="w-full max-w-2xl">
-                                            {/* Ad Container */}
-                                            <div className="bg-white rounded-lg p-4 mb-4">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-xs text-gray-600">Advertisement</span>
-                                                    {canSkipAd && (
-                                                        <button
-                                                            onClick={handleSkipAd}
-                                                            className="flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm transition-colors"
-                                                        >
-                                                            Skip Ad <X className="h-3 w-3" />
-                                                        </button>
-                                                    )}
-                                                    {!canSkipAd && (
-                                                        <span className="text-xs text-gray-600">
-                                                            Skip in {adCountdown}s
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {/* Banner Ad */}
-                                                <div className="flex justify-center bg-gray-100 rounded min-h-[90px] items-center">
-                                                    <AdScript
-                                                        id="video-overlay-ad"
-                                                        script='<script type="text/javascript">atOptions = {"key" : "6b0cf0d29e8605091ae3a4bfe3da7a74","format" : "iframe","height" : 90,"width" : 728,"params" : {}};</script><script type="text/javascript" src="//www.topcreativeformat.com/6b0cf0d29e8605091ae3a4bfe3da7a74/invoke.js"></script>'
-                                                    />
-                                                </div>
-                                            </div>
-                                            <p className="text-white text-center text-sm">
-                                                Your video will play after the ad
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
 
                                 {video.isPremium && !isSubscribed && currentUserId !== author?._id && (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10 p-4">
